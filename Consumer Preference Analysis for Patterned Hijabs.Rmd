@@ -1,0 +1,226 @@
+---
+title: "Consumer Preference Analysis for Patterned Hijabs"
+author: "Nabila Yasmine Az Zahra"
+date: "2025-06-24"
+output: html_document
+---
+
+```{r load-packages}
+#Warning: The dataset used in this project is a dummy dataset created for learning and portfolio purposes. It does not contain any confidential, real, or proprietary company data.
+
+library(dplyr)
+library(ggplot2)
+library(ordinal)
+library(pscl)
+library(MASS)
+
+#clear environment and console before starting analysis
+rm (list=ls())
+cat("\014")
+
+#load data
+setwd("C:/Users/ASUS/Downloads/")
+data <- read.csv("dummy_survei.csv", sep =";")
+
+#creating a bar chart to explore customer preferences across different price categories.
+#this helps identify which price segments are most appealing and can guide future pricing strategies.
+
+#recode price category labels to shorter, more readable formats 
+data <- data %>%
+  mutate(harga = recode(harga,
+                                 "< Rp. 50.000" = "<50K",
+                                 "Rp.50.000 - Rp. 100.000" = "50-100K",
+                                 "Rp. 100.000 - Rp. 200.000" = "100-200K",
+                                 "Rp. 200.000 - Rp. 500.000" = "200-500K",
+                                 "> Rp. 500.000" = ">500K"
+  ))
+#ensure the variable is treated as a factor to maintain the correct categorical order in the visualization.
+data$harga <- factor(data$harga,
+                              levels = c("<50K", "50-100K", "100-200K", "200-500K", ">500K"))
+#Bar chart
+ggplot(data, aes(x = harga)) +
+  geom_bar(fill = "#69b3a2") +
+  labs(
+    title = "Customer Price Preference",
+    x = "Price Category",
+    y = "Number of Customers"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 11, face = "bold"),
+    plot.title = element_text(size = 13, face = "bold", hjust = 0.5)
+  )
+
+#---Interpretation---
+#  The bar chart shows that the majority of customers prefer patterned hijabs within the price range of Rp50,000 to Rp100,000, followed by those priced below Rp50,000. Interest significantly declines for prices above Rp100,000, with very low demand for hijabs over Rp200,000. This suggests that affordable pricing is a critical factor for this market, and most consumers associate value with prices under Rp100K.
+
+
+#convert response variable to ordered factor
+data$prefer_motif_n <- factor(data$prefer_motif_n, ordered = TRUE)
+
+#starting the modeling process using ordinal logistic regression to analyze key factors influencing patterned hijab preferences.
+#each model represents a different thematic group of predictors to uncover specific patterns and insights.
+
+#=========================================
+# Model 1: Based on Daily Clothing Style
+#=========================================
+model1 <- polr(prefer_motif_n ~ sering_sergm + sering_formal + sering_casual + sering_femin + sering_glamour, data = data, Hess = TRUE)
+summary (model1)
+
+#to calculate p-value for model 1
+ctable1 <- coef(summary(model1))
+pval1 <- pnorm(abs(ctable1[, "t value"]), lower.tail = FALSE) * 2
+ctable1 <- cbind(ctable1, "p value" = pval1)
+print(ctable1)
+
+#compute pseudo R2 & goodness of fit model 1
+pR2(model1)
+AIC(model1)
+
+#---Interpretation:--- 
+#  The model reveals that individuals who often wear feminine and glamorous clothing are significantly more likely to prefer patterned hijabs. This suggests that people with more expressive or stylish daily looks are attracted to visually striking designs like patterns.
+
+#===========================================
+# Model 2: Based on Hijab Color Preference
+#===========================================
+model2 <- polr(prefer_motif_n ~ suka_basic + suka_pastel + suka_terang, data = data, Hess = TRUE)
+
+#to calculate p-value for model 2
+ctable2 <- coef(summary(model2))
+pval2 <- pnorm(abs(ctable2[, "t value"]), lower.tail = FALSE) * 2
+ctable2 <- cbind(ctable2, "p value" = pval2)
+print(ctable2)
+
+#compute pseudo R2 & goodness of fit model 2
+pR2(model2)
+AIC(model2)
+
+#---Interpretation---
+#  Among color preferences, bright colors show a significant positive association with liking patterned hijabs. This implies that people who enjoy wearing vibrant colors may also favor more decorative hijabs, such as those with motifs. Meanwhile, pastel and basic colors show weaker or non-significant effects.
+
+#========================================
+# Model 3: Based on Material Preference
+#========================================
+model3 <- polr(prefer_motif_n ~ prefer_voal_n + prefer_satin_n + prefer_katun_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 3
+ctable3 <- coef(summary(model3))
+pval3 <- pnorm(abs(ctable3[, "t value"]), lower.tail = FALSE) * 2
+ctable3 <- cbind(ctable3, "p value" = pval3)
+print(ctable3)
+
+#compute pseudo R2 & goodness of fit model 3
+pR2(model3)
+AIC(model3)
+
+#---Interpretation---
+#  Preference for voal fabric is significantly associated with higher preference for patterned hijabs. Voal is lightweight and easy to style, which may complement the aesthetics of patterns. Satin and cotton preferences do not show significant effects in this model.
+
+#=================================================
+# Model 4:  Based on Hijab Edge Style Preference
+#=================================================
+model4 <- polr(prefer_motif_n ~ suka_neci + suka_laser + suka_rawis + suka_jaittepi, data = data, Hess = TRUE)
+
+#to calculate p-value for model 4
+ctable4 <- coef(summary(model4))
+pval4 <- pnorm(abs(ctable4[, "t value"]), lower.tail = FALSE) * 2
+ctable4 <- cbind(ctable4, "p value" = pval4)
+print(ctable4)
+
+#compute pseudo R2 & goodness of fit model 4
+pR2(model4)
+AIC(model4)
+
+#---Interpretation---
+#  Consumers who favor laser cut edges are more likely to prefer patterned hijabs. This indicates a preference for polished and modern finishes. Other edge styles like overlock stitching (neci) or frayed edges (rawis) show less impact.
+
+#===============================================
+# Model 5: Based on Hijab Type Usage Frequency
+#===============================================
+model5 <- polr(prefer_motif_n ~ sering_segiempat_n + sering_pashmina_n + sering_instan_n + sering_lain_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 5
+ctable5 <- coef(summary(model5))
+pval5 <- pnorm(abs(ctable5[, "t value"]), lower.tail = FALSE) * 2
+ctable5 <- cbind(ctable5, "p value" = pval5)
+print(ctable5)
+
+#compute pseudo R2 & goodness of fit model 5
+pR2(model5)
+AIC(model5)
+
+#---Interpretation---
+#  The results suggest that those who frequently wear square-shaped hijabs (segiempat) are more likely to prefer patterns. This could be due to the symmetrical space that allows motifs to be displayed well. Other types like instant or pashmina hijabs do not show strong correlations.
+
+#==============================================
+# Model 6: Based on Style Inspiration Sources
+#==============================================
+model6 <- polr(prefer_motif_n ~ inspo_infl_n + inspo_tmn_n + inspo_pintr_n + inspo_blog_n + inspo_drama_n + inspo_kreatif_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 6
+ctable6 <- coef(summary(model6))
+pval6 <- pnorm(abs(ctable6[, "t value"]), lower.tail = FALSE) * 2
+ctable6 <- cbind(ctable6, "p value" = pval6)
+print(ctable6)
+
+#compute pseudo R2 & goodness of fit model 6
+pR2(model6)
+AIC(model6)
+
+#---Interpretation---
+#  Among sources of hijab style inspiration, Pinterest shows a significant influence on preference for patterned hijabs. This suggests that users who actively seek hijab styling ideas from visual platforms may be more exposed to or influenced by creative, patterned looks.
+
+#============================================
+# Model 7: Based on Purchase Considerations
+#============================================
+model7 <- polr(prefer_motif_n ~ timbang_bahan_n + timbang_warna_n + timbang_harga_n + timbang_design_n + timbang_nyaman_n + timbang_brand_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 7
+ctable7 <- coef(summary(model7))
+pval7 <- pnorm(abs(ctable7[, "t value"]), lower.tail = FALSE) * 2
+ctable7 <- cbind(ctable7, "p value" = pval7)
+print(ctable7)
+
+#compute pseudo R2 & goodness of fit model 7
+pR2(model7)
+AIC(model7)
+
+#---Interpretation---
+#  Shoppers who carefully consider material, color, and design before purchasing are more likely to prefer patterned hijabs. These individuals appear more selective and focused on aesthetics. Price and brand consideration, however, are not strongly predictive.
+
+#====================================
+# Model 8: Based on Buying Behavior
+#====================================
+model8 <- polr(prefer_motif_n ~ freq_beli_n + banding_harga_n + bayar_lebih_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 8
+ctable8 <- coef(summary(model8))
+pval8 <- pnorm(abs(ctable8[, "t value"]), lower.tail = FALSE) * 2
+ctable8 <- cbind(ctable8, "p value" = pval8)
+print(ctable8)
+
+#compute pseudo R2 & goodness of fit model 8
+pR2(model8)
+AIC(model8)
+
+#---Interpretation---
+#  People who are willing to pay more for premium hijabs are more inclined toward patterned hijabs, possibly because they perceive patterns as more luxurious or exclusive. Frequent buyers or price comparers are not strong predictors in this case.
+
+#=================================
+# Model 9: Based on Demographics
+#=================================
+model9 <- polr(prefer_motif_n ~ usia_n + jawa_n + gaji_n + pend_n, data = data, Hess = TRUE)
+
+#to calculate p-value for model 9
+ctable9 <- coef(summary(model9))
+pval9 <- pnorm(abs(ctable9[, "t value"]), lower.tail = FALSE) * 2
+ctable9 <- cbind(ctable9, "p value" = pval9)
+print(ctable9)
+
+#compute pseudo R2 & goodness of fit model 9
+pR2(model9)
+AIC(model9)
+
+#---Interpretation---
+#  Education level shows a significant positive relationship with preference for patterned hijabs. This may reflect greater exposure to fashion trends or higher appreciation for design quality among more educated consumers. Other variables like income or age show less influence.
